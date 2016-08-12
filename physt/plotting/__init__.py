@@ -22,6 +22,12 @@ try:
 except:
     pass
 
+try:
+    from . import altair as altair_backend
+    backends["altair"] = altair_backend
+except:
+    pass
+
 
 if backends:
     default_backend = list(backends.keys())[0]
