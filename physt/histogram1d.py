@@ -525,7 +525,8 @@ class Histogram1D(HistogramBase):
         return cls(**kwargs)
 
 
-def calculate_frequencies(data, binning, weights=None, validate_bins=True, already_sorted=False, dtype=None):
+def calculate_frequencies(data, binning, weights=None, validate_bins=True,
+                             already_sorted=False, stats_overflow=True, dtype=None):
     """Get frequencies and bin errors from the data.
 
     Parameters
@@ -540,6 +541,9 @@ def calculate_frequencies(data, binning, weights=None, validate_bins=True, alrea
         If True (default), bins are validated to be in ascending order.
     already_sorted : bool, optional
         If True, the data being entered are already sorted, no need to sort them once more.
+    stats_overflow : bool
+        If True, means and other measures are calculated using all values
+        If False, statistics is calculated only from values in bins
     dtype: Optional[type]
         Underlying type for the histogram. If weights are specified, default is float. Otherwise long
 
@@ -602,48 +606,64 @@ def calculate_frequencies(data, binning, weights=None, validate_bins=True, alrea
     if dtype.kind in "iu" and weights is not None and weights.dtype.kind == "f":
         raise RuntimeError("Integer histogram requested but float weights entered.")
 
-    # Data sorting
-    if not already_sorted:
-        args = np.argsort(data)     # Memory: another copy
-        data = data[args]           # Memory: another copy
-        if weights is not None:
-            weights = weights[args]
-        del args
-
-    # Fill frequencies and errors
-    frequencies = np.zeros(bins.shape[0], dtype=dtype)
-    errors2 = np.zeros(bins.shape[0], dtype=dtype)
-    for xbin, bin in enumerate(bins):
-        start = np.searchsorted(data, bin[0], side="left")
-        stop = np.searchsorted(data, bin[1], side="left")
-
-        if xbin == 0:
-            if weights is not None:
-                underflow = weights[0:start].sum()
-            else:
-                underflow = start
-        if xbin == len(bins) - 1:
-            stop = np.searchsorted(data, bin[1], side="right")   # TODO: Understand and explain
-            if weights is not None:
-                overflow = weights[stop:].sum()
-            else:
-                overflow = data.shape[0] - stop
-
-        if weights is not None:
-            frequencies[xbin] = weights[start:stop].sum()
-            errors2[xbin] = (weights[start:stop] ** 2).sum()
-            sum += (data[start:stop] * weights[start:stop]).sum()
-            sum2 += ((data[start:stop]) ** 2 * weights[start:stop]).sum()
+    if stats_overflow:
+        edges, mask = bin_utils.to_numpy_bins_with_mask(bins, include_infs=True)
+        raw_frequencies, _ = np.histogram(data, edges, weights=weights)
+        frequencies = raw_frequencies[mask].copy()
+        if mask[0]:
+            underflow = 0
         else:
-            frequencies[xbin] = stop - start
-            errors2[xbin] = stop - start
-            sum += data[start:stop].sum()
-            sum2 += (data[start:stop] ** 2).sum()
+            underflow = raw_frequencies[0]
+        if mask[-1]:
+            overflow = 0
+        else:
+            overflow = raw_frequencies[-1]
+        errors2 = frequencies.copy()
+        sum = data.sum()
+        sum2 = (data ** 2).sum()
+    else:
+        # Data sorting
+        if not already_sorted:
+            args = np.argsort(data)     # Memory: another copy
+            data = data[args]           # Memory: another copy
+            if weights is not None:
+                weights = weights[args]
+            del args
 
-    # Underflow and overflow don't make sense for unconsecutive binning.
-    if not bin_utils.is_consecutive(bins):
-        underflow = np.nan
-        overflow = np.nan
+        # Fill frequencies and errors
+        frequencies = np.zeros(bins.shape[0], dtype=dtype)
+        errors2 = np.zeros(bins.shape[0], dtype=dtype)
+        for xbin, bin in enumerate(bins):
+            start = np.searchsorted(data, bin[0], side="left")
+            stop = np.searchsorted(data, bin[1], side="left")
+
+            if xbin == 0:
+                if weights is not None:
+                    underflow = weights[0:start].sum()
+                else:
+                    underflow = start
+            if xbin == len(bins) - 1:
+                stop = np.searchsorted(data, bin[1], side="right")   # TODO: Understand and explain
+                if weights is not None:
+                    overflow = weights[stop:].sum()
+                else:
+                    overflow = data.shape[0] - stop
+
+            if weights is not None:
+                frequencies[xbin] = weights[start:stop].sum()
+                errors2[xbin] = (weights[start:stop] ** 2).sum()
+                sum += (data[start:stop] * weights[start:stop]).sum()
+                sum2 += ((data[start:stop]) ** 2 * weights[start:stop]).sum()
+            else:
+                frequencies[xbin] = stop - start
+                errors2[xbin] = stop - start
+                sum += data[start:stop].sum()
+                sum2 += (data[start:stop] ** 2).sum()
+
+        # Underflow and overflow don't make sense for unconsecutive binning.
+        if not bin_utils.is_consecutive(bins):
+            underflow = np.nan
+            overflow = np.nan
 
     stats = { "sum": sum, "sum2" : sum2}
 

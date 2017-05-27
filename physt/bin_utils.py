@@ -60,7 +60,7 @@ def to_numpy_bins(bins):
     return np.concatenate([bins[:1, 0], bins[:, 1]])
 
 
-def to_numpy_bins_with_mask(bins):
+def to_numpy_bins_with_mask(bins, include_infs=False):
     """Numpy binning edges including gaps.
 
     Parameters
@@ -109,6 +109,13 @@ def to_numpy_bins_with_mask(bins):
         raise RuntimeError("to_numpy_bins_with_mask: array with dim=1 or 2 expected")
     if not np.all(np.diff(edges) > 0):
         raise RuntimeError("to_numpy_bins_with_mask: edges array not monotone.")
+    if include_infs:
+        if edges[0] != -np.inf:
+            edges = np.concatenate(([-np.inf], edges))
+            mask = np.concatenate(([False], mask))
+        if edges[-1] != np.inf:
+            edges = np.concatenate((edges, [np.inf]))
+            mask = np.concatenate((mask, [False]))
     return edges, mask
 
 
