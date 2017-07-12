@@ -36,6 +36,12 @@ try:
 except:
     pass
 
+try:
+    from . import bqplot as bqplot_backend
+    backends["bqplot"] = bqplot_backend
+except:
+    pass
+
 
 if backends:
     _default_backend = list(backends.keys())[0]
