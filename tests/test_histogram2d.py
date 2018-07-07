@@ -124,8 +124,8 @@ class TestArithmetics(object):
         xx = np.array([0.5, 1.5, 2.5, 2.2, 3.3, 4.2])
         yy = np.array([1.5, 1.5, 1.5, 2.2, 1.3, 1.2])
         h = physt.h2(xx, yy, "fixed_width", 1)
-        with pytest.raises(RuntimeError):
-            h + 4
+        h_ = h + 1
+        assert np.allclose(h.frequencies + 1, h_.frequencies)
 
     def test_addition_with_another(self):
         xx = np.array([0.5, 1.5, 2.5, 2.2, 3.3, 4.2])
@@ -156,9 +156,8 @@ class TestArithmetics(object):
         xx = np.array([0.5, 1.5, 2.5, 2.2, 3.3, 4.2])
         yy = np.array([1.5, 1.5, 1.5, 2.2, 1.3, 1.2])
         h = physt.h2(xx, yy, "fixed_width", 1)
-        with pytest.raises(RuntimeError):
-            h - 4
-
+        h_ = h - 4
+        assert np.allclose(h.frequencies - 4, h_.frequencies)
 
 class TestDtype(object):
     def test_simple(self):

@@ -781,7 +781,8 @@ class HistogramBase(object):
     def __add__(self, other):
         new = self.copy()
         new += other
-        new._meta_data = self._merge_meta_data(self, other)
+        if isinstance(other, HistogramBase):
+            new._meta_data = self._merge_meta_data(self, other)
         return new
 
     def __radd__(self, other):
@@ -792,7 +793,9 @@ class HistogramBase(object):
 
     def __iadd__(self, other):
         if np.isscalar(other):
-            raise RuntimeError("Cannot add constant to histograms.")
+            self._frequencies += other
+            self._stats = None
+            return self
         if other.ndim != self.ndim:
             raise RuntimeError("Cannot add histograms with different dimensions.")
         elif self.has_same_bins(other):
@@ -835,7 +838,8 @@ class HistogramBase(object):
     def __sub__(self, other):
         new = self.copy()
         new -= other
-        new._meta_data = self._merge_meta_data(self, other)
+        if isinstance(other, HistogramBase):
+            new._meta_data = self._merge_meta_data(self, other)
         return new
 
     def __isub__(self, other):

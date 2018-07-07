@@ -190,8 +190,8 @@ class TestIndexing(object):
 
 class TestArithmetic(object):
     def test_add_number(self):
-        with pytest.raises(RuntimeError):
-            example + 4
+        example2 = example + 1
+        assert np.allclose([5, 1, 4, 8.2], example2._frequencies)
 
     def test_add_wrong_histograms(self):
         with pytest.raises(RuntimeError):
