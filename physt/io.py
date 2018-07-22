@@ -57,8 +57,9 @@ class FileBase(object):
         at write convert to OrderDict
         and json
         '''
-        self._meta
-        self._meta['name'] = self._filename(fname)
+        self.name = fname
+        self._meta = {}
+        self._meta['name'] = self.name
         self._meta["physt_version"] = __version__
         self._meta["physt_compatible"] = "0.3.20"
         self._meta["keys"] = []
@@ -101,7 +102,7 @@ class FileBase(object):
         else:
             filename = fname
         '''    
-        self._name = None
+        self._name = fname
 
     def get(self, key):
         return self._histograms[key]

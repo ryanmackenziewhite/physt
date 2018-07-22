@@ -7,6 +7,7 @@ sys.path = [os.path.join(os.path.dirname(__file__), "..")] + sys.path
 import physt
 from physt import bin_utils, io
 from physt.histogram1d import Histogram1D
+from physt.io import FileBase 
 
 
 class TestIO(object):
@@ -40,6 +41,11 @@ class TestIO(object):
         read = io.parse_json(json)
         assert h == read
 
+    def test_file(self):
+        from physt.examples import normal_h1
+        h = normal_h1()
+        a_file = FileBase('test')
+        a_file.book(h.name,h)
 
 if __name__ == "__main__":
     pytest.main(__file__)
