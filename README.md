@@ -148,6 +148,19 @@ Rationale (for both): physt is dumb, but precise.
 
 I am looking for anyone interested in using / developing physt. You can contribute by reporting errors, implementing missing features and suggest new one.
 
+## Development Notes
+
+Forked Physt from janpipek/physt
+
+* File class to store a collection of histograms
+* Book histograms
+* Fill histograms
+* Retrieve histograms
+* Merge Files, adding histograms
+* File I/O write collections of histograms to file (json)
+* Interested if Arrow or google protobuf can be used as file
+* Tensorflow has tensflow.summary which has a collection of protobufs
+
 ## Alternatives and inspirations
 
 * <https://github.com/HDembinski/histogram>
