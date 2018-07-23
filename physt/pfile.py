@@ -11,6 +11,7 @@ Collections of histograms in a file object
 
 """
 import json
+import sys
 from collections import OrderedDict
 
 from . import __version__
@@ -18,7 +19,7 @@ from .histogram_base import HistogramBase
 from .util import find_subclass
 
 
-class FileBase(object):
+class Pfile(object):
     '''
     Base File class to hold collections of histograms
 
@@ -72,7 +73,7 @@ class FileBase(object):
         self._meta['name'] = self.name
         self._meta["physt_version"] = __version__
         self._meta["physt_compatible"] = "0.3.20"
-        self._meta["keys"] = []
+        #self._meta["keys"] = []
         
         self._histograms = {}
         pass
@@ -98,7 +99,7 @@ class FileBase(object):
     
     @property 
     def keys(self):
-        return self._histograms.keys
+        return list(self._histograms.keys())
     
     @property
     def name(self):
@@ -126,7 +127,7 @@ class FileBase(object):
         
         Override in algo 
         '''
-        pass
+        self._histograms[key] = histogram
 
     def fill(self, key, values, weights=None):
         '''
@@ -156,6 +157,45 @@ class FileBase(object):
         pass arrays 
         '''
         pass
+    
+    def save_to_json(self):
+        result = self._to_dict()
+        fname = self.name +'.json'
+        try:
+            with open(fname, 'w', encoding="utf-8") as ofile:
+                json.dump(result, ofile, indent=4)
+        except IOError as e:
+            print('IOError')
+            return False
+        except:
+            print(sys.exc_info()[0])
+            return False
+        return True
+    
+    def parse_from_json(self, filename):
+        with open(filename, 'r', encoding="utf-8") as ifile:
+            text = ifile.read()    
+        
+        data = json.loads(text,object_pairs_hook=OrderedDict)
+        
+        self._from_dict(data)
+
+    
+    def _from_dict(self,data):
+        '''
+        Convert data from OrderedDict of keys and histograms
+        to internal reprensenation
+        '''
+        histograms = data['histograms']
+        for key in histograms:
+            datum = histograms[key]
+            histogram_type = datum["histogram_type"]
+            klass = find_subclass(HistogramBase, histogram_type)
+            self._histograms[key] = klass.from_dict(datum)
+
+    def display_from_json(self):
+        result = self._to_dict()
+        print(json.dumps(result, indent=4))
 
     def _to_dict(self):
         '''
@@ -163,15 +203,20 @@ class FileBase(object):
         Convert each histogram to OrderedDict
         '''
         result = OrderedDict()
-        for idx, key in enumerate(self._histograms.keys):
+        result['meta_data'] = self.meta_data
+        result['histograms'] = OrderedDict()
+        for idx, key in enumerate(self._histograms.keys()):
             if self._histograms[key] is None:
                 print('Error, cannot retrieve histograms')
             else:
-                result[key] = self.histograms[key].to_dict()
+                result['histograms'][key] = self._histograms[key].to_dict()
         return result        
 
     def close(self):
 
         afile = self._to_dict()
         afile.save_to_json()
-        pass 
+        pass
+
+
+

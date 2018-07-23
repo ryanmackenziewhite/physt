@@ -6,6 +6,7 @@ import json
 from . import __version__
 from .histogram_base import HistogramBase
 from .util import find_subclass
+from .pfile import Pfile
 
 
         
@@ -66,3 +67,35 @@ def parse_json(text):
     # TODO: Check version
     klass = find_subclass(HistogramBase, histogram_type)
     return klass.from_dict(data)
+
+
+def merge(fname, files=[]):
+    '''
+    merge two or more files
+    adding equivalent keys
+
+    pass a globbing pattern
+    merge all hist files in directory?
+    '''
+    print(fname)
+    merge_name = fname + '_merge'
+    print(merge_name)
+    print(files)
+    merge_file = Pfile(merge_name)
+    merge_file.parse_from_json(files.pop())
+    while(len(files)>0):
+        tmp_file = Pfile()
+        tmp_file.parse_from_json(files.pop())
+        for key in merge_file.keys:
+            merge_file._histograms[key] += tmp_file._histograms[key]
+    
+    return merge_file
+
+
+
+
+
+
+
+
+
