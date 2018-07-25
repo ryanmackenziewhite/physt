@@ -1,0 +1,45 @@
+// Implement Histograms as protocol buffers
+// Requires separate Binning as in the json implementation
+syntax = "proto3";
+package physt;
+
+message Meta {
+    repeated string axis_names = 1
+    repeated float missed = 2
+    bool missed_keep = 3
+    string physt_version = 4
+    string physt_compatible = 5
+
+}
+
+message Binnings {
+    bool adaptive = 1
+    string binning_type = 2
+    
+    message Binlimits {
+        float lower_limit = 1
+        float upper_limit = 2    
+    }
+    
+    repeated Binlimits bins = 3
+}
+
+message Histogram1D {
+    string histogram_type = 1
+    
+    Binnings binnings = 2    
+        
+    repeated float frequencies = 3
+
+    string dtype = 4
+
+    repeated float errors2 = 5
+
+    Meta meta = 6
+}
+
+message Summary {
+    repeated Histogram1D histograms = 1
+}
+
+
