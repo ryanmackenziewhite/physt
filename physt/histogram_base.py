@@ -706,7 +706,7 @@ class HistogramBase(object):
         result["missed_keep"] = self.keep_missed
         self._update_dict(result)
         return result
-
+    
     def _update_dict(self, a_dict):
         """Update the dictionary for export.
 

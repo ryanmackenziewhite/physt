@@ -7,7 +7,7 @@ sys.path = [os.path.join(os.path.dirname(__file__), "..")] + sys.path
 import physt
 from physt import bin_utils, io
 from physt.histogram1d import Histogram1D
-
+from physt import histogram1d_pb2
 
 class TestIO(object):
     def test_json_write_string(self):
@@ -15,7 +15,7 @@ class TestIO(object):
         values = [4, 0, 3, 7.2]
         example = Histogram1D(bins, values, overflow=1, underflow=2)
         output = io.save_json(example)
-        print(output)
+        #print(output)
         #assert False
 
     def test_json_write_2d(self):
@@ -41,6 +41,36 @@ class TestIO(object):
         read = io.parse_json(json)
         assert h == read
 
+    def test_protobuf(self):
+        '''
+        Create the protocol buffer
+        Does it match the json object?
+        '''
+        print('PROTOBUF')
+        bins = [1.2, 1.4, 1.5, 1.7, 1.8]
+        values = [4, 0, 3, 7.2]
+        example = Histogram1D(bins, values, overflow=1, underflow=2)
+        output = io.save_json(example)
+        
+        h_dict = example.to_dict()
+        summary = histogram1d_pb2.Summary()
+        proto_hist = summary.histograms1d.add()
+        proto_hist.histogram_type = type(example).__name__
+
+        proto_hist.binnings.adaptive = example.binning.is_adaptive() 
+        proto_hist.binnings.binning_type = type(example.binning).__name__
+        proto_hist.dtype = str(np.dtype(example.dtype))
+        proto_hist.meta.axis_names.extend(example.axis_names)
+        
+        for bins in example.binning.bins.tolist():
+            tmp = proto_hist.binnings.bins.add()
+            tmp.lower_limit = bins[0]
+            tmp.upper_limit = bins[-1]
+        proto_hist.frequencies.extend(h_dict['frequencies'])
+        proto_hist.errors2.extend(h_dict['errors2'])
+
+        print(output)
+        print(proto_hist)
 
 if __name__ == "__main__":
     pytest.main(__file__)
