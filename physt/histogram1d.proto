@@ -17,8 +17,7 @@ message Meta {
 }
 
 message BinLimits {
-    float lower_limit = 1;
-    float upper_limit = 2;    
+    repeated float limits = 1;
 }
 
 message Binnings {

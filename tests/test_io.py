@@ -60,12 +60,14 @@ class TestIO(object):
         proto_hist.binnings.adaptive = example.binning.is_adaptive() 
         proto_hist.binnings.binning_type = type(example.binning).__name__
         proto_hist.dtype = str(np.dtype(example.dtype))
+        
+        meta = example.meta_data
         proto_hist.meta.axis_names.extend(example.axis_names)
+
         
         for bins in example.binning.bins.tolist():
-            tmp = proto_hist.binnings.bins.add()
-            tmp.lower_limit = bins[0]
-            tmp.upper_limit = bins[-1]
+            limits = proto_hist.binnings.bins.add()
+            limits.limits.extend(bins)
         proto_hist.frequencies.extend(h_dict['frequencies'])
         proto_hist.errors2.extend(h_dict['errors2'])
 
