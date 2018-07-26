@@ -2,7 +2,7 @@
 from __future__ import absolute_import, division
 import numpy as np
 from .binnings import as_binning
-
+from .histogram_pb2 import Histogram as Message
 
 class HistogramBase(object):
     """Histogram base class.
@@ -112,7 +112,7 @@ class HistogramBase(object):
 
         if "axis_names" not in kwargs:
             kwargs["axis_names"] = ["axis{0}".format(i) for i in range(self.ndim)]
-
+        
         # Meta data
         self._meta_data = kwargs.copy()
 
@@ -683,6 +683,72 @@ class HistogramBase(object):
         from .plotting import PlottingProxy
         return PlottingProxy(self)
 
+    def to_protobuf(self):
+        '''
+        Protocol buffer with all data in the histogram
+
+        Rather than convert to/from dict,
+        use properties of class to set/get the protobuf
+
+        message is the protobuf that is created from
+        adding to the Summary message (collection of messages)
+        simplifies creating a data store of several histograms
+        '''
+        message = Message()
+        message.meta.name = self._meta_data["name"]
+        message.meta.axis_names.extend(self.axis_names)
+        message.histogram_type = type(self).__name__
+        message.dtype = str(np.dtype(self.dtype))
+
+        for binning in self._binnings:
+            binning_proto = message.binnings.add()
+            binning_proto.adaptive = binning.is_adaptive() 
+            binning_proto.binning_type = type(binning).__name__
+            for edges in binning.bins:
+                limits = binning_proto.bins.add()
+                limits.lower = edges[0]
+                limits.upper = edges[1]
+        
+        message.frequencies.extend(self.frequencies.tolist())
+        message.errors2.extend(self.errors2.tolist())
+        message.missed.extend(self._missed.tolist())
+        message.missed_keep = self.keep_missed
+        return message
+    
+    @classmethod
+    def _from_message_kwargs(cls, message):
+        '''
+        convert from protobuf to dictionary
+        '''
+        #print(message.binnings)        
+        binnings = []
+        for binning in message.binnings:
+            a_dict = {}
+            a_dict['adaptive'] = binning.adaptive
+            a_dict['binning_type'] = binning.binning_type
+            a_dict['bins'] = []
+            for a_bin in binning.bins:
+                a_dict['bins'].append([a_bin.lower, a_bin.upper])
+            binnings.append(a_dict)
+
+        #print(binnings) 
+        from .binnings import BinningBase
+
+        kwargs = {
+            "binnings": [BinningBase.from_dict(binning_data) for binning_data in binnings],
+            "dtype": np.dtype(message.dtype),
+            "frequencies": [freq for freq in message.frequencies],
+            "errors2": [error2 for error2 in message.errors2],
+            "missed":  [missed for missed in message.missed],
+            "meta_data": {"name":message.meta.name,"axis_names":message.meta.axis_names}
+
+        }
+        #kwargs.update(a_dict.get("meta_data", {}))
+        if len(kwargs["binnings"]) > 2:
+            kwargs["dimension"] = len(kwargs["binnings"])
+        
+        return kwargs
+
     def to_dict(self):
         """Dictionary with all data in the histogram.
 
@@ -764,6 +830,24 @@ class HistogramBase(object):
         """
         kwargs = cls._from_dict_kwargs(a_dict)
         return cls(**kwargs)
+    
+    @classmethod
+    def from_message(cls, a_message):
+        """Create an instance from a protobuf message.
+
+        If customization is necessary, override the _from_message_kwargs
+        template method, not this one.
+
+        Parameters
+        ----------
+        a_dict : dict
+
+        Returns
+        -------
+        HistogramBase
+        """
+        kwargs = cls._from_message_kwargs(a_message)
+        return cls(**kwargs)
 
     def to_json(self, path=None, **kwargs):
         """Convert to JSON representation.
@@ -783,6 +867,7 @@ class HistogramBase(object):
 
     def __repr__(self):
         if self.name:
+            print(self.name)
             result = "{0}('{4}', bins={1}, total={2}, dtype={3})".format(
                 self.__class__.__name__, self.shape, self.total, self.dtype, self.name)
         else:

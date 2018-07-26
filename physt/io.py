@@ -5,7 +5,7 @@ import json
 from . import __version__
 from .histogram_base import HistogramBase
 from .util import find_subclass
-
+from .histogram_pb2 import Summary
 
 def save_json(histogram, path=None, **kwargs):
     """Save histogram to JSON format.
@@ -32,6 +32,30 @@ def save_json(histogram, path=None, **kwargs):
         with open(path, "w", encoding="utf-8") as f:
             f.write(text)
     return text
+
+def load_message(path=None):
+    summary = Summary()
+    with open(path, "rb") as f:
+        summary.ParseFromString(f.read())
+    return summary    
+
+def save_message(histograms, path=None, **kwargs):
+    '''
+    Creates a Summary protobuf
+    Takes list of histograms
+    Create a collection of histograms serialized to a single protobuf
+    Enforce histogram name is defined (required)
+    '''
+    summary = Summary()
+    for h in histograms:
+        proto = summary.histograms[h.name]      
+        proto.CopyFrom(h.to_protobuf())
+    
+    #print(summary)
+    if(path):
+        with open(path,"wb") as f:
+            f.write(summary.SerializeToString())
+    return summary        
 
 
 def load_json(path=None):

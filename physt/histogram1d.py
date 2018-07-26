@@ -56,7 +56,7 @@ class Histogram1D(HistogramBase):
         ]
         if "axis_name" in kwargs:
             kwargs["axis_names"] = [kwargs.pop("axis_name")]
-
+        
         HistogramBase.__init__(self, [binning], frequencies, errors2, **kwargs)
 
         if self.keep_missed:
@@ -501,6 +501,12 @@ class Histogram1D(HistogramBase):
             columns=["left", "right", "frequency", "error"])
         return df
 
+    @classmethod
+    def _from_message_kwargs(cls, a_message):
+        kwargs = HistogramBase._from_message_kwargs.__func__(cls, a_message)
+        kwargs["binning"] = kwargs.pop("binnings")[0]
+        return kwargs
+    
     @classmethod
     def _from_dict_kwargs(cls, a_dict):
         kwargs = HistogramBase._from_dict_kwargs.__func__(cls, a_dict)

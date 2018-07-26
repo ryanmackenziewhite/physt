@@ -7,7 +7,11 @@ sys.path = [os.path.join(os.path.dirname(__file__), "..")] + sys.path
 import physt
 from physt import bin_utils, io
 from physt.histogram1d import Histogram1D
-from physt import histogram1d_pb2
+from physt import histogram_pb2
+
+
+from physt.util import find_subclass
+from physt.histogram_base import HistogramBase
 
 class TestIO(object):
     def test_json_write_string(self):
@@ -46,33 +50,51 @@ class TestIO(object):
         Create the protocol buffer
         Does it match the json object?
         '''
-        print('PROTOBUF')
+        #print('PROTOBUF')
         bins = [1.2, 1.4, 1.5, 1.7, 1.8]
         values = [4, 0, 3, 7.2]
-        example = Histogram1D(bins, values, overflow=1, underflow=2)
+        example = Histogram1D(bins, values, overflow=1, underflow=2,name="key")
+        #example.name = 'key'
         output = io.save_json(example)
         
         h_dict = example.to_dict()
-        summary = histogram1d_pb2.Summary()
-        proto_hist = summary.histograms1d.add()
-        proto_hist.histogram_type = type(example).__name__
-
-        proto_hist.binnings.adaptive = example.binning.is_adaptive() 
-        proto_hist.binnings.binning_type = type(example.binning).__name__
-        proto_hist.dtype = str(np.dtype(example.dtype))
+         
+        summary = histogram_pb2.Summary()
+        proto_hist = summary.histograms[example.name]      
+        proto_hist.CopyFrom(example.to_protobuf())
         
-        meta = example.meta_data
-        proto_hist.meta.axis_names.extend(example.axis_names)
+        io.save_message([example])
 
-        
-        for bins in example.binning.bins.tolist():
-            limits = proto_hist.binnings.bins.add()
-            limits.limits.extend(bins)
-        proto_hist.frequencies.extend(h_dict['frequencies'])
-        proto_hist.errors2.extend(h_dict['errors2'])
+        histogram_type = proto_hist.histogram_type
+        # TODO: Check version
+        klass = find_subclass(HistogramBase, histogram_type)
+        tested = klass.from_message(proto_hist)
+        print(example)
+        #tested.name='key'
+        print(tested)
+        #assert example == tested
 
-        print(output)
-        print(proto_hist)
+    def test_io_protobuf(self):
+        print('PROTOBUF')
+        bins = [1.2, 1.4, 1.5, 1.7, 1.8]
+        values = [4, 0, 3, 7.2]
+        example = Histogram1D(bins, values, overflow=1, underflow=2,name='key')
+        example.name = 'key'
+        summary = histogram_pb2.Summary()
+        proto_hist = summary.histograms[example.name]      
+        proto_hist.CopyFrom(example.to_protobuf())
+        io.save_message([example],'test_proto.data')
+        load = io.load_message('test_proto.data')
+
+        histos = {}
+        for key in load.histograms:
+            histogram_type = load.histograms[key].histogram_type
+            klass = find_subclass(HistogramBase, histogram_type)
+            histos[key] = klass.from_message(load.histograms[key])
+
+
+
+
 
 if __name__ == "__main__":
     pytest.main(__file__)
